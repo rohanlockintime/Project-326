@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruthCheck - Digital Fact-Checking Workflow</title>
+<style>
+body { margin: 0; font-family: Arial, sans-serif; background: #f2f4f7; color: #222; }
+h1 { color: #0b2447; margin-top: 0; }
+h2 { color: #0b2447; margin-top: 0; font-size: 18px; }
+
+#sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: 220px; background: #0b2447; color: white; padding: 20px; box-sizing: border-box; }
+#sidebar h2 { color: white; margin-bottom: 4px; }
+#sidebar p { font-size: 12px; margin-top: 0; opacity: 0.7; }
+#sidebar a { display: block; color: #dbe4f5; padding: 10px; text-decoration: none; border-radius: 5px; margin-bottom: 5px; }
+#sidebar a:hover { background: #19376d; color: white; }
+#main { margin-left: 220px; padding: 25px; }
+.page { display: none; }
+
+.box { background: white; padding: 18px; border-radius: 6px; border: 1px solid #ddd; margin-bottom: 20px; }
+.cards { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; }
+.card { background: white; border: 1px solid #ddd; border-radius: 6px; padding: 15px; width: 150px; flex-grow: 1; }
+.card b { display: block; font-size: 30px; color: #0b2447; }
+
+.scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+th { background: #eef0f4; }
+
+label { font-weight: bold; font-size: 14px; }
+input, select, textarea { width: 100%; padding: 8px; margin: 4px 0 12px 0; border: 1px solid #bbb; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+td select { width: auto; margin: 0; }
+button { background: #0b2447; color: white; border: 0; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+button:hover { opacity: 0.85; }
+button.light { background: #dde2ea; color: #0b2447; }
+.buttons button { margin: 0 8px 8px 0; }
+button.danger { background: #c0392b; }
+button.ok { background: #2e9e5b; }
+button.warn { background: #f0b400; color: #222; }
+
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: bold; white-space: nowrap; }
+.verified { background: #d4f1df; color: #1a6b3c; }
+.false { background: #f9d6d3; color: #9b2a1f; }
+.partial { background: #fff1bf; color: #7a5c00; }
+.unverified { background: #e3e6ea; color: #555; }
+
+.claimbox { border: 1px solid #ddd; border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; }
+.claimbox p { margin: 6px 0; }
+
+@media (max-width: 700px) {
+  #sidebar { position: static; width: auto; }
+  #sidebar a { display: inline-block; }
+  #main { margin-left: 0; padding: 15px; }
+}
+</style>
+</head>
+<body>
+
+<div id="sidebar">
+  <h2>TruthCheck</h2>
+  <p>Digital Fact-Checking Workflow</p>
+  <a href="#" onclick="showPage('dashboard'); return false;">Dashboard</a>
+  <a href="#" onclick="showPage('articles'); return false;">Articles and Claims</a>
+  <a href="#" onclick="showPage('review'); return false;">Review and Approval</a>
+</div>
+
+<div id="main">
+
+<div class="page" id="dashboard">
+  <h1>Dashboard</h1>
+  <div class="cards">
+    <div class="card"><span>Total Articles</span><b id="totalArticles">0</b></div>
+    <div class="card"><span>Total Claims</span><b id="totalClaims">0</b></div>
+    <div class="card"><span>Verified Claims</span><b id="verifiedClaims">0</b></div>
+    <div class="card"><span>False Claims</span><b id="falseClaims">0</b></div>
+    <div class="card"><span>Pending Claims</span><b id="pendingClaims">0</b></div>
+  </div>
+  <div class="box buttons">
+    <h2>Quick Actions</h2>
+    <button onclick="showPage('articles');">Add Article</button>
+    <button onclick="showPage('articles');">Add Claim</button>
+    <button onclick="showPage('review');">Review Articles</button>
+  </div>
+  <div class="box">
+    <h2>Recent Articles</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Status</th></tr></thead>
+        <tbody id="recentArticles"></tbody>
+      </table>
+    </div>
+    <br>
+    <button class="light" onclick="showPage('articles');">View All Articles</button>
+  </div>
+</div>
+
+<div class="page" id="articles">
+  <h1>Articles and Claims</h1>
+  <button onclick="openArticleForm()">Add Article</button>
+  <button onclick="openClaimForm()">Add Claim</button>
+
+  <div class="box" id="articleForm" style="display: none; margin-top: 15px;">
+    <h2 id="articleFormTitle">Add Article</h2>
+    <label>Article Title</label>
+    <input type="text" id="articleTitle">
+    <label>Author Name</label>
+    <input type="text" id="articleAuthor">
+    <label>Category</label>
+    <select id="articleCategory">
+      <option value="">-- Select category --</option>
+      <option>Politics</option>
+      <option>Health</option>
+      <option>Science</option>
+      <option>Technology</option>
+      <option>Education</option>
+      <option>Business</option>
+      <option>Sports</option>
+    </select>
+    <label>Article Content</label>
+    <textarea id="articleContent" rows="5"></textarea>
+    <button onclick="saveArticle()">Save Article</button>
+    <button class="light" onclick="closeForms()">Cancel</button>
+  </div>
+
+  <div class="box" id="claimForm" style="display: none; margin-top: 15px;">
+    <h2>Add Claim</h2>
+    <label>Article</label>
+    <select id="claimArticle"></select>
+    <label>Claim Description</label>
+    <textarea id="claimText" rows="3"></textarea>
+    <label>Source Name</label>
+    <input type="text" id="sourceName">
+    <label>Source URL</label>
+    <input type="text" id="sourceUrl" placeholder="https://...">
+    <label>Supporting Evidence</label>
+    <textarea id="supporting" rows="2"></textarea>
+    <label>Contradictory Evidence</label>
+    <textarea id="contradicting" rows="2"></textarea>
+    <label>Reviewer Notes</label>
+    <textarea id="notes" rows="2"></textarea>
+    <label>Status</label>
+    <select id="claimStatus"></select>
+    <button onclick="saveClaim()">Save Claim</button>
+    <button class="light" onclick="closeForms()">Cancel</button>
+  </div>
+
+  <div class="box" style="margin-top: 15px;">
+    <h2>All Articles</h2>
+    <input type="text" id="searchBox" placeholder="Search articles by title, author or category" oninput="showArticles()">
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Title</th><th>Author</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="articleRows"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="box" style="margin-top: 15px;">
+    <h2>All Claims</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Claim</th><th>Article</th><th>Source</th><th>Status</th><th>Change Status</th><th>Action</th></tr></thead>
+        <tbody id="claimRows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="review">
+  <h1>Review and Approval</h1>
+  <div class="box">
+    <label>Select Article</label>
+    <select id="reviewArticle" onchange="showReview()"></select>
+  </div>
+  <div class="box" id="reviewDetails"></div>
+  <div class="box">
+    <h2>Reviewer Comments</h2>
+    <textarea id="reviewComment" rows="3" placeholder="Write your comments here"></textarea>
+    <button class="ok" onclick="approveArticle()">Approve Article</button>
+    <button class="warn" onclick="requestReview()">Request Further Review</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+var articles = JSON.parse(localStorage.getItem("articles"));
+var claims = JSON.parse(localStorage.getItem("claims"));
+
+if (articles === null) {
+  articles = [
+    { id: 3, title: "Viral Post Claims Moon Landing Was Filmed in a Studio", author: "Ananya Gupta", category: "Science",
+      content: "A social media post says the 1969 Moon landing was staged. We checked two of the most shared arguments.",
+      status: "Approved", comment: "All claims checked against NASA material." },
+    { id: 2, title: "Daily Walking Linked to Better Heart Health", author: "Rahul Verma", category: "Health",
+      content: "The article says regular walking improves heart health and recommends a daily step target for adults.",
+      status: "Pending", comment: "" },
+    { id: 1, title: "City Launches Free Electric Bus Service", author: "Priya Sharma", category: "Politics",
+      content: "The city council has launched a new electric bus route. The article says rides are free and traffic will fall sharply.",
+      status: "Pending", comment: "" }
+  ];
+  claims = [
+    { id: 101, articleId: 1, text: "The city has added 50 new electric buses to its fleet.", sourceName: "Municipal Transport Office", sourceUrl: "https://example.com/transport",
+      supporting: "Press release lists 50 buses delivered in October.", contradicting: "", notes: "Matches the press release.", status: "Verified" },
+    { id: 102, articleId: 1, text: "The bus service will be free for all passengers permanently.", sourceName: "Council notice", sourceUrl: "https://example.com/notice",
+      supporting: "The mayor said rides are free during launch month.", contradicting: "The council notice says fares start again after 30 days.", notes: "Only free for the first month.", status: "Partially True" },
+    { id: 103, articleId: 1, text: "The new buses will cut city traffic by 40 percent.", sourceName: "", sourceUrl: "",
+      supporting: "", contradicting: "", notes: "No study found yet.", status: "Unverified" },
+    { id: 104, articleId: 2, text: "Adults should do at least 150 minutes of moderate physical activity every week.", sourceName: "World Health Organization", sourceUrl: "https://www.who.int",
+      supporting: "WHO guidelines recommend 150 to 300 minutes per week.", contradicting: "", notes: "Confirmed.", status: "Verified" },
+    { id: 105, articleId: 2, text: "Walking 10,000 steps a day is the scientifically proven ideal target.", sourceName: "Health research summary", sourceUrl: "https://example.com/steps",
+      supporting: "More daily steps are linked to lower health risks.", contradicting: "The 10,000 figure started as a marketing slogan.", notes: "Should say 'a popular target'.", status: "Partially True" },
+    { id: 106, articleId: 3, text: "Apollo 11 landed astronauts on the Moon in July 1969.", sourceName: "NASA", sourceUrl: "https://www.nasa.gov",
+      supporting: "NASA mission records and lunar samples.", contradicting: "", notes: "", status: "Verified" },
+    { id: 107, articleId: 3, text: "The US flag moved on the Moon, which proves there was wind.", sourceName: "NASA", sourceUrl: "https://www.nasa.gov",
+      supporting: "", contradicting: "The Moon has no air. The flag moved because the astronauts twisted the pole.", notes: "Common myth.", status: "False" }
+  ];
+  saveData();
+}
+
+var editingId = null;
+
+function get(id) { return document.getElementById(id); }
+
+function saveData() {
+  localStorage.setItem("articles", JSON.stringify(articles));
+  localStorage.setItem("claims", JSON.stringify(claims));
+}
+
+function findArticle(id) {
+  for (var i = 0; i < articles.length; i++) {
+    if (articles[i].id == id) return articles[i];
+  }
+  return null;
+}
+
+function articleTitle(id) {
+  var article = findArticle(id);
+  return article ? article.title : "(deleted article)";
+}
+
+function label(status) {
+  var color = "unverified";
+  if (status == "Verified" || status == "Approved") color = "verified";
+  else if (status == "False") color = "false";
+  else if (status == "Partially True" || status == "Needs Review") color = "partial";
+  return '<span class="tag ' + color + '">' + status + "</span>";
+}
+
+function statusOptions(selected) {
+  var list = ["Verified", "False", "Partially True", "Unverified"];
+  var html = "";
+  for (var i = 0; i < list.length; i++) {
+    html += list[i] == selected ? "<option selected>" + list[i] + "</option>" : "<option>" + list[i] + "</option>";
+  }
+  return html;
+}
+
+function fillArticleDropdown(selectId, firstOption) {
+  var html = firstOption;
+  for (var i = 0; i < articles.length; i++) {
+    html += '<option value="' + articles[i].id + '">' + articles[i].title + "</option>";
+  }
+  get(selectId).innerHTML = html;
+}
+
+function sourceLink(claim) {
+  if (claim.sourceUrl) return '<a href="' + claim.sourceUrl + '" target="_blank">' + (claim.sourceName || claim.sourceUrl) + "</a>";
+  if (claim.sourceName) return claim.sourceName;
+  return "No source yet";
+}
+
+function showPage(name) {
+  var pages = ["dashboard", "articles", "review"];
+  for (var i = 0; i < pages.length; i++) get(pages[i]).style.display = "none";
+  get(name).style.display = "block";
+  closeForms();
+  if (name == "dashboard") showDashboard();
+  if (name == "articles") { showArticles(); showClaims(); }
+  if (name == "review") showReviewPage();
+}
+
+function closeForms() {
+  get("articleForm").style.display = "none";
+  get("claimForm").style.display = "none";
+}
+
+function showDashboard() {
+  var verified = 0, falseClaims = 0, pending = 0;
+  for (var i = 0; i < claims.length; i++) {
+    if (claims[i].status == "Verified") verified++;
+    if (claims[i].status == "False") falseClaims++;
+    if (claims[i].status == "Unverified") pending++;
+  }
+  get("totalArticles").innerHTML = articles.length;
+  get("totalClaims").innerHTML = claims.length;
+  get("verifiedClaims").innerHTML = verified;
+  get("falseClaims").innerHTML = falseClaims;
+  get("pendingClaims").innerHTML = pending;
+
+  var rows = "";
+  for (var j = 0; j < articles.length && j < 5; j++) {
+    rows += "<tr><td>" + articles[j].title + "</td><td>" + articles[j].author + "</td><td>" +
+            articles[j].category + "</td><td>" + label(articles[j].status) + "</td></tr>";
+  }
+  get("recentArticles").innerHTML = rows || '<tr><td colspan="4">No articles yet.</td></tr>';
+}
+
+function openArticleForm() {
+  closeForms();
+  editingId = null;
+  get("articleTitle").value = "";
+  get("articleAuthor").value = "";
+  get("articleCategory").value = "";
+  get("articleContent").value = "";
+  get("articleFormTitle").innerHTML = "Add Article";
+  get("articleForm").style.display = "block";
+}
+
+function saveArticle() {
+  var title = get("articleTitle").value.trim();
+  var author = get("articleAuthor").value.trim();
+  var category = get("articleCategory").value;
+  var content = get("articleContent").value.trim();
+
+  if (!title || !author || !category || !content) {
+    alert("Please fill in all the fields.");
+    return;
+  }
+  if (content.length < 20) {
+    alert("Article content must be at least 20 characters.");
+    return;
+  }
+
+  if (editingId == null) {
+    articles.unshift({ id: Date.now(), title: title, author: author, category: category, content: content, status: "Pending", comment: "" });
+  } else {
+    var article = findArticle(editingId);
+    article.title = title;
+    article.author = author;
+    article.category = category;
+    article.content = content;
+  }
+  saveData();
+  closeForms();
+  showArticles();
+  showClaims();
+}
+
+function showArticles() {
+  var search = get("searchBox").value.toLowerCase();
+  var rows = "";
+  for (var i = 0; i < articles.length; i++) {
+    var a = articles[i];
+    if ((a.title + " " + a.author + " " + a.category).toLowerCase().indexOf(search) != -1) {
+      rows += "<tr><td>" + a.title + "</td><td>" + a.author + "</td><td>" + a.category + "</td><td>" + label(a.status) + "</td>" +
+              '<td><button class="light" onclick="editArticle(' + a.id + ')">Edit</button> ' +
+              '<button class="danger" onclick="deleteArticle(' + a.id + ')">Delete</button></td></tr>';
+    }
+  }
+  get("articleRows").innerHTML = rows || '<tr><td colspan="5">No articles found.</td></tr>';
+}
+
+function editArticle(id) {
+  closeForms();
+  var a = findArticle(id);
+  editingId = a.id;
+  get("articleTitle").value = a.title;
+  get("articleAuthor").value = a.author;
+  get("articleCategory").value = a.category;
+  get("articleContent").value = a.content;
+  get("articleFormTitle").innerHTML = "Edit Article";
+  get("articleForm").style.display = "block";
+}
+
+function deleteArticle(id) {
+  if (!confirm("Delete this article and all its claims?")) return;
+  articles = articles.filter(function(a) { return a.id != id; });
+  claims = claims.filter(function(c) { return c.articleId != id; });
+  saveData();
+  showArticles();
+  showClaims();
+}
+
+function openClaimForm() {
+  closeForms();
+  fillArticleDropdown("claimArticle", '<option value="">-- Select article --</option>');
+  get("claimStatus").innerHTML = statusOptions("Unverified");
+  get("claimText").value = "";
+  get("sourceName").value = "";
+  get("sourceUrl").value = "";
+  get("supporting").value = "";
+  get("contradicting").value = "";
+  get("notes").value = "";
+  get("claimForm").style.display = "block";
+}
+
+function saveClaim() {
+  var articleId = get("claimArticle").value;
+  var text = get("claimText").value.trim();
+  var sourceName = get("sourceName").value.trim();
+  var sourceUrl = get("sourceUrl").value.trim();
+
+  if (!articleId) {
+    alert("Please select an article.");
+    return;
+  }
+  if (text.length < 10) {
+    alert("Claim description must be at least 10 characters.");
+    return;
+  }
+  if (sourceUrl && sourceUrl.indexOf("http") != 0) {
+    alert("Source URL must start with http:// or https://");
+    return;
+  }
+
+  claims.unshift({
+    id: Date.now(),
+    articleId: articleId,
+    text: text,
+    sourceName: sourceName,
+    sourceUrl: sourceUrl,
+    supporting: get("supporting").value.trim(),
+    contradicting: get("contradicting").value.trim(),
+    notes: get("notes").value.trim(),
+    status: get("claimStatus").value
+  });
+  saveData();
+  closeForms();
+  showClaims();
+}
+
+function showClaims() {
+  var rows = "";
+  for (var i = 0; i < claims.length; i++) {
+    var c = claims[i];
+    rows += "<tr><td>" + c.text + "</td><td>" + articleTitle(c.articleId) + "</td><td>" + sourceLink(c) + "</td><td>" + label(c.status) + "</td>" +
+            '<td><select onchange="changeStatus(' + c.id + ', this.value)">' + statusOptions(c.status) + "</select></td>" +
+            '<td><button class="danger" onclick="deleteClaim(' + c.id + ')">Delete</button></td></tr>';
+  }
+  get("claimRows").innerHTML = rows || '<tr><td colspan="6">No claims yet. Click "Add Claim".</td></tr>';
+}
+
+function changeStatus(id, newStatus) {
+  for (var i = 0; i < claims.length; i++) {
+    if (claims[i].id == id) claims[i].status = newStatus;
+  }
+  saveData();
+  showClaims();
+}
+
+function deleteClaim(id) {
+  if (!confirm("Delete this claim?")) return;
+  claims = claims.filter(function(c) { return c.id != id; });
+  saveData();
+  showClaims();
+}
+
+function showReviewPage() {
+  fillArticleDropdown("reviewArticle", "");
+  showReview();
+}
+
+function showReview() {
+  var article = findArticle(get("reviewArticle").value);
+  if (!article) {
+    get("reviewDetails").innerHTML = "<p>There are no articles to review yet.</p>";
+    get("reviewComment").value = "";
+    return;
+  }
+
+  var html = "<h2>" + article.title + "</h2>" +
+             "<p>By " + article.author + " | " + article.category + " | " + label(article.status) + "</p>" +
+             "<p>" + article.content + "</p><h3>Claims</h3>";
+
+  var count = 0;
+  for (var i = 0; i < claims.length; i++) {
+    var c = claims[i];
+    if (c.articleId == article.id) {
+      count++;
+      html += '<div class="claimbox"><b>' + c.text + "</b> " + label(c.status) +
+              "<p><b>Supporting evidence:</b> " + (c.supporting || "None") + "</p>" +
+              "<p><b>Contradictory evidence:</b> " + (c.contradicting || "None") + "</p>" +
+              "<p><b>Source:</b> " + sourceLink(c) + "</p>" +
+              "<p><b>Reviewer notes:</b> " + (c.notes || "None") + "</p></div>";
+    }
+  }
+  if (count == 0) html += "<p>No claims have been added for this article yet.</p>";
+
+  get("reviewDetails").innerHTML = html;
+  get("reviewComment").value = article.comment;
+}
+
+function approveArticle() {
+  var article = findArticle(get("reviewArticle").value);
+  if (!article) {
+    alert("Please select an article.");
+    return;
+  }
+
+  var total = 0, unverified = 0;
+  for (var i = 0; i < claims.length; i++) {
+    if (claims[i].articleId == article.id) {
+      total++;
+      if (claims[i].status == "Unverified") unverified++;
+    }
+  }
+
+  if (total == 0) {
+    alert("Cannot approve: this article has no claims yet.");
+    return;
+  }
+  if (unverified > 0) {
+    alert("Cannot approve: " + unverified + " claim(s) are still Unverified.");
+    return;
+  }
+
+  article.status = "Approved";
+  article.comment = get("reviewComment").value.trim();
+  saveData();
+  showReview();
+  alert("Article approved!");
+}
+
+function requestReview() {
+  var article = findArticle(get("reviewArticle").value);
+  if (!article) {
+    alert("Please select an article.");
+    return;
+  }
+  if (!get("reviewComment").value.trim()) {
+    alert("Please write a reviewer comment first.");
+    return;
+  }
+  article.status = "Needs Review";
+  article.comment = get("reviewComment").value.trim();
+  saveData();
+  showReview();
+  alert("Article sent back for further review.");
+}
+
+showPage("dashboard");
+</script>
+</body>
+</html>
